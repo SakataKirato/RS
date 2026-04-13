@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <color name="surfaceWarm">#F4EFE6</color>
+  <color name="panel">#FFFBF4</color>
+  <color name="accent">#A1491D</color>
+  <color name="textPrimary">#2F2418</color>
+  <color name="textMuted">#756553</color>
+  <color name="statusNeutralBg">#E7DDD0</color>
+  <color name="statusFastBg">#F7D9D5</color>
+  <color name="statusSlowBg">#DCE5FF</color>
+  <color name="statusOkBg">#DDEEE4</color>
+  <color name="statusFastText">#B43B28</color>
+  <color name="statusSlowText">#2E57C5</color>
+  <color name="statusOkText">#2E6B4C</color>
+</resources>
