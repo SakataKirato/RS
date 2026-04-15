@@ -24,6 +24,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
   companion object {
     private const val ACTION_USB_PERMISSION = "com.example.tempofeedback.USB_PERMISSION"
     private const val BAUD_RATE = 115200
+    private const val ALERT_CONFIRM_COUNT = 2
+    private const val OK_CONFIRM_COUNT = 2
+    private const val RESET_COMMAND = "RESET\n"
+    private const val RESET_ACK = "RESET_ACK"
+    private const val WRITE_TIMEOUT_MS = 200
   }
 
   private lateinit var binding: ActivityMainBinding
@@ -37,6 +42,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
   private var lastSpeechTimeMs: Long = 0L
   private val logLines = ArrayDeque<String>()
   private var serialBuffer = ""
+  private var activeJudgement = TempoJudgement.OK
+  private var fastCount = 0
+  private var slowCount = 0
+  private var okCount = 0
+  private var awaitingResetAck = false
 
   private val usbReceiver = object : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -81,7 +91,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
       }
     }
 
-    binding.resetButton.setOnClickListener { resetUi() }
+    binding.resetButton.setOnClickListener { resetMeasurement() }
     binding.clearLogButton.setOnClickListener { clearLog() }
   }
 
@@ -201,7 +211,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     val lines = serialBuffer.split('\n')
     serialBuffer = lines.lastOrNull().orEmpty()
     lines.dropLast(1).forEach { line ->
-      val bpm = parseBpm(line.trim()) ?: return@forEach
+      val normalizedLine = line.trim()
+      if (normalizedLine == RESET_ACK) {
+        awaitingResetAck = false
+        appendLog(getString(R.string.log_reset_acknowledged))
+        return@forEach
+      }
+      if (awaitingResetAck) {
+        return@forEach
+      }
+
+      val bpm = parseBpm(normalizedLine) ?: return@forEach
       evaluateTempo(bpm)
     }
   }
@@ -222,11 +242,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     binding.currentBpmText.text = String.format(Locale.US, "%.1f", bpm)
     binding.deltaText.text = String.format(Locale.US, "%+.1f", delta)
 
-    val judgement = when {
+    val nextObservedJudgement = when {
       delta > tolerance -> TempoJudgement.FAST
       delta < -tolerance -> TempoJudgement.SLOW
       else -> TempoJudgement.OK
     }
+
+    val judgement = stabilizeJudgement(nextObservedJudgement)
 
     when (judgement) {
       TempoJudgement.FAST -> {
@@ -239,6 +261,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
       }
       TempoJudgement.OK -> {
         renderOkStatus(getString(R.string.status_good))
+        textToSpeech?.stop()
+        lastSpokenStatus = ""
       }
     }
 
@@ -287,11 +311,34 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     binding.logText.text = getString(R.string.log_empty)
   }
 
+  private fun resetMeasurement() {
+    resetUi()
+
+    val port = serialPort ?: return
+    awaitingResetAck = true
+    runCatching {
+      port.write(RESET_COMMAND.toByteArray(Charsets.UTF_8), WRITE_TIMEOUT_MS)
+      appendLog(getString(R.string.log_reset_sent))
+      showToast(getString(R.string.measurement_reset_sent))
+    }.onFailure { error ->
+      awaitingResetAck = false
+      appendLog(getString(R.string.log_reset_failed))
+      showToast(error.message ?: getString(R.string.measurement_reset_failed))
+    }
+  }
+
   private fun resetUi() {
     binding.currentBpmText.text = "--"
     binding.deltaText.text = "--"
     lastSpokenStatus = ""
     lastSpeechTimeMs = 0L
+    activeJudgement = TempoJudgement.OK
+    fastCount = 0
+    slowCount = 0
+    okCount = 0
+    serialBuffer = ""
+    awaitingResetAck = false
+    textToSpeech?.stop()
     renderNeutralStatus(if (serialPort == null) getString(R.string.status_waiting) else getString(R.string.status_listening))
   }
 
@@ -301,9 +348,45 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     runCatching { serialPort?.close() }
     serialPort = null
     serialBuffer = ""
+    activeJudgement = TempoJudgement.OK
+    fastCount = 0
+    slowCount = 0
+    okCount = 0
+    awaitingResetAck = false
     binding.connectButton.text = getString(R.string.connect_button)
     binding.inputSourceText.text = getString(R.string.source_not_connected)
     renderNeutralStatus(getString(R.string.status_waiting))
+  }
+
+  private fun stabilizeJudgement(observedJudgement: TempoJudgement): TempoJudgement {
+    when (observedJudgement) {
+      TempoJudgement.FAST -> {
+        fastCount += 1
+        slowCount = 0
+        okCount = 0
+        if (fastCount >= ALERT_CONFIRM_COUNT) {
+          activeJudgement = TempoJudgement.FAST
+        }
+      }
+      TempoJudgement.SLOW -> {
+        slowCount += 1
+        fastCount = 0
+        okCount = 0
+        if (slowCount >= ALERT_CONFIRM_COUNT) {
+          activeJudgement = TempoJudgement.SLOW
+        }
+      }
+      TempoJudgement.OK -> {
+        okCount += 1
+        fastCount = 0
+        slowCount = 0
+        if (okCount >= OK_CONFIRM_COUNT) {
+          activeJudgement = TempoJudgement.OK
+        }
+      }
+    }
+
+    return activeJudgement
   }
 
   private fun renderNeutralStatus(text: String) {

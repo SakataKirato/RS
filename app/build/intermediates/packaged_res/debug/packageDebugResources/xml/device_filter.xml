@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Leave broad so generic CDC/ACM devices such as Arduino can trigger attach. -->
+  <usb-device />
+</resources>

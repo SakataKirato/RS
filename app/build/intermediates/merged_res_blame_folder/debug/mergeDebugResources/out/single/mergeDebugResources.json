@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.example.tempofeedback.app-debug-34:/drawable_status_background_neutral.xml.flat",
+        "source": "com.example.tempofeedback.app-main-36:/drawable/status_background_neutral.xml"
+    },
+    {
+        "merged": "com.example.tempofeedback.app-debug-34:/drawable_status_background_ok.xml.flat",
+        "source": "com.example.tempofeedback.app-main-36:/drawable/status_background_ok.xml"
+    },
+    {
+        "merged": "com.example.tempofeedback.app-debug-34:/xml_device_filter.xml.flat",
+        "source": "com.example.tempofeedback.app-main-36:/xml/device_filter.xml"
+    },
+    {
+        "merged": "com.example.tempofeedback.app-debug-34:/drawable_status_background_fast.xml.flat",
+        "source": "com.example.tempofeedback.app-main-36:/drawable/status_background_fast.xml"
+    },
+    {
+        "merged": "com.example.tempofeedback.app-debug-34:/layout_activity_main.xml.flat",
+        "source": "com.example.tempofeedback.app-main-36:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.tempofeedback.app-debug-34:/drawable_status_background_slow.xml.flat",
+        "source": "com.example.tempofeedback.app-main-36:/drawable/status_background_slow.xml"
+    }
+]

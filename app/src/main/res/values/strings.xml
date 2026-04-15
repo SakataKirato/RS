@@ -23,7 +23,12 @@
   <string name="log_title">ログ</string>
   <string name="clear_log_button">ログを消去</string>
   <string name="log_empty">まだログはありません。</string>
+  <string name="log_reset_sent">計測状態をリセットしました</string>
+  <string name="log_reset_acknowledged">Arduino が再計測を開始しました</string>
+  <string name="log_reset_failed">計測状態のリセット送信に失敗しました</string>
   <string name="usb_permission_denied">USB 権限が拒否されました</string>
   <string name="usb_not_found">USB シリアルデバイスが見つかりません</string>
   <string name="serial_read_error">シリアル読み取りエラー</string>
+  <string name="measurement_reset_sent">Arduino の計測状態をリセットしました</string>
+  <string name="measurement_reset_failed">Arduino へのリセット送信に失敗しました</string>
 </resources>
